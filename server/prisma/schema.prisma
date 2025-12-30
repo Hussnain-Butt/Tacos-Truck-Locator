@@ -1,0 +1,259 @@
+// Prisma Schema for Taco Truck Locator
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USER & AUTH
+// ==========================================
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer?
+  vendor   Vendor?
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+// ==========================================
+// CUSTOMER
+// ==========================================
+
+model Customer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites Truck[]  @relation("CustomerFavorites")
+  reviews   Review[]
+}
+
+// ==========================================
+// VENDOR
+// ==========================================
+
+model Vendor {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  truck Truck?
+}
+
+// ==========================================
+// TRUCK
+// ==========================================
+
+model Truck {
+  id          String   @id @default(cuid())
+  vendorId    String   @unique
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  specialty   String
+  phone       String?
+  email       String?
+  website     String?
+  
+  isOnline    Boolean  @default(false)
+  isVerified  Boolean  @default(false)
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  
+  // Analytics
+  viewCount       Int      @default(0)
+  navigationCount Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  location    Location?
+  menu        MenuItem[]
+  hours       OperatingHours[]
+  photos      Photo[]
+  offers      Offer[]
+  reviews     Review[]
+  favoritedBy Customer[]       @relation("CustomerFavorites")
+
+  @@index([isOnline])
+  @@index([rating])
+}
+
+// ==========================================
+// LOCATION (Real-time GPS)
+// ==========================================
+
+model Location {
+  id        String   @id @default(cuid())
+  truckId   String   @unique
+  truck     Truck    @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  latitude  Float
+  longitude Float
+  address   String?
+  city      String?
+  state     String?
+  
+  updatedAt DateTime @updatedAt
+
+  @@index([latitude, longitude])
+}
+
+// ==========================================
+// MENU
+// ==========================================
+
+enum MenuCategory {
+  TACOS
+  BURRITOS
+  QUESADILLAS
+  SIDES
+  DRINKS
+  DESSERTS
+  SPECIALS
+}
+
+model MenuItem {
+  id          String       @id @default(cuid())
+  truckId     String
+  truck       Truck        @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String?
+  price       Float
+  category    MenuCategory @default(TACOS)
+  isAvailable Boolean      @default(true)
+  isPopular   Boolean      @default(false)
+  imageUrl    String?
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([truckId])
+  @@index([category])
+}
+
+// ==========================================
+// OPERATING HOURS
+// ==========================================
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model OperatingHours {
+  id        String    @id @default(cuid())
+  truckId   String
+  truck     Truck     @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek DayOfWeek
+  openTime  String    // Format: "HH:MM" (24hr)
+  closeTime String    // Format: "HH:MM" (24hr)
+  isClosed  Boolean   @default(false)
+
+  @@unique([truckId, dayOfWeek])
+  @@index([truckId])
+}
+
+// ==========================================
+// PHOTOS
+// ==========================================
+
+model Photo {
+  id        String   @id @default(cuid())
+  truckId   String
+  truck     Truck    @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  url       String
+  caption   String?
+  isPrimary Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+
+  @@index([truckId])
+}
+
+// ==========================================
+// OFFERS & PROMOTIONS
+// ==========================================
+
+model Offer {
+  id          String   @id @default(cuid())
+  truckId     String
+  truck       Truck    @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  
+  title       String
+  description String?
+  discount    String?  // e.g., "20% off", "$2 off"
+  code        String?  // Promo code
+  
+  isActive    Boolean  @default(true)
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([truckId])
+  @@index([isActive])
+}
+
+// ==========================================
+// REVIEWS & RATINGS
+// ==========================================
+
+model Review {
+  id         String   @id @default(cuid())
+  truckId    String
+  truck      Truck    @relation(fields: [truckId], references: [id], onDelete: Cascade)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  rating     Int      // 1-5
+  title      String?
+  comment    String?
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([truckId, customerId]) // One review per customer per truck
+  @@index([truckId])
+  @@index([rating])
+}

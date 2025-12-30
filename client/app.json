@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Tacos",
+    "slug": "tacos",
+    "version": "1.0.0",
+    "scheme": "tacotrucklocator",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.webdev1.tacos",
+      "config": {
+        "googleMapsApiKey": "AIzaSyCT3Jxvfz822GTjTZeBWNzchw52-M2K8l8"
+      },
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.webdev_1.tacos",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyCT3Jxvfz822GTjTZeBWNzchw52-M2K8l8"
+        }
+      }
+    },
+    "plugins": [
+      "expo-asset",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a2cc0b7b-9cdd-410a-9457-34f3123fff5f"
+      }
+    }
+  }
+}

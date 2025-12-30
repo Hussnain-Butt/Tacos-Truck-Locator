@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Expo
+.expo/
+*.jks
+*.p12
+*.key
+*.keystore
+
+# Android
+android/
+!android/build.gradle
+!android/settings.gradle
+!android/gradle.properties
+!android/gradlew
+!android/gradle.properties
+!android/gradle/
+!android/app/
+# But ignore some Android build paths if not ejected (usually we want to track android folder in bare workflow, but ignore builds)
+android/app/build/
+android/.gradle/
+
+# iOS
+ios/
+!ios/*.xcodeproj
+!ios/*.xcworkspace
+!ios/Podfile
+ios/Pods/
+ios/build/
+ios/.xcode.env.local
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
