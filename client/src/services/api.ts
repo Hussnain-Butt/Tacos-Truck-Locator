@@ -11,7 +11,7 @@ const DEV_MACHINE_IP = '192.168.1.10'; // Your computer's IP
 
 const getBaseUrl = () => {
   if (!__DEV__) {
-    return 'https://your-production-api.com';
+    return 'https://tacos-truck-locator-production.up.railway.app';
   }
   
   // For Android (both emulator and real device)

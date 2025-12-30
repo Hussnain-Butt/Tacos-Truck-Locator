@@ -47,9 +47,10 @@ const io = new SocketIOServer(httpServer, {
 app.use(helmet());
 
 // CORS configuration
+const clientUrl = process.env.CLIENT_URL || 'http://localhost:8081';
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:8081',
-  credentials: true,
+  origin: clientUrl,
+  credentials: clientUrl !== '*', // Disable credentials if allowing all origins (wildcard)
 }));
 
 // Request logging

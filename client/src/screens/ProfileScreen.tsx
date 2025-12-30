@@ -412,13 +412,15 @@ const SettingItem: React.FC<SettingItemProps> = ({
              <Text style={styles.settingValue}>{value}</Text>
           )}
           
-          {hasToggle ? (
+          {hasToggle && (
             <View style={styles.toggle}>
               <View style={styles.toggleKnob} />
             </View>
-          ) : onPress ? (
+          )}
+          
+          {!hasToggle && onPress && (
             <Icon name="forward" size={16} color={theme.colors.gray[400]} />
-          ) : null}
+          )}
         </View>
       </TouchableOpacity>
     </Animated.View>

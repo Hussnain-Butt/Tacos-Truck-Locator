@@ -9,7 +9,7 @@ import { io, Socket } from 'socket.io-client';
 const DEV_MACHINE_IP = '192.168.1.10';
 const SOCKET_URL = __DEV__
   ? `http://${DEV_MACHINE_IP}:3000` // Physical device / Android emulator
-  : 'https://your-production-api.com';
+  : 'https://tacos-truck-locator-production.up.railway.app';
 
 // For iOS simulator, use: http://localhost:3000
 // For physical device, use your computer's IP: http://192.168.x.x:3000
