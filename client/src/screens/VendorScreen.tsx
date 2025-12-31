@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, Switch, Alert, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Switch, Alert, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -48,6 +48,8 @@ const VendorScreen: React.FC = () => {
   const [address, setAddress] = useState<string>('Fetching address...');
   const [truckId, setTruckId] = useState<string | null>(null);
   const [truckName, setTruckName] = useState<string>('My Taco Truck');
+  const [hasServerLocation, setHasServerLocation] = useState<boolean>(true); // Track if location is set on server
+  const [showLocationPrompt, setShowLocationPrompt] = useState<boolean>(false);
 
   // Logout handler
   const handleLogout = async () => {
@@ -123,40 +125,47 @@ const VendorScreen: React.FC = () => {
         const response = await authService.getCurrentUser();
         const user = response.user as any;
         
-        if (user?.profile?.truck) {
-          setTruckId(user.profile.truck.id);
-          setTruckName(user.profile.truck.name || 'My Taco Truck');
-          setIsLive(user.profile.truck.isOnline || false);
+        // Backend returns truck at root level for vendors
+        const truckData = user?.truck || user?.profile?.truck;
+        
+        if (truckData) {
+          setTruckId(truckData.id);
+          setTruckName(truckData.name || 'My Taco Truck');
+          setIsLive(truckData.isOnline || false);
           
           // Set performance stats from truck data
-          setProfileViews(user.profile.truck.viewCount || 0);
-          setNavigations(user.profile.truck.navigationCount || 0);
+          setProfileViews(truckData.viewCount || 0);
+          setNavigations(truckData.navigationCount || 0);
           
-          // Load saved location from backend if available
-          if (user.profile.truck.location) {
-            const savedLoc = user.profile.truck.location;
+          // Check if truck has location on server
+          if (truckData.location && truckData.location.latitude && truckData.location.longitude) {
+            setHasServerLocation(true);
+            const savedLoc = truckData.location;
             if (savedLoc.address) {
               setAddress(savedLoc.address);
             }
             // Update map location to saved location
-            if (savedLoc.latitude && savedLoc.longitude) {
-              setLocation({
-                coords: {
-                  latitude: savedLoc.latitude,
-                  longitude: savedLoc.longitude,
-                  altitude: 0,
-                  accuracy: 0,
-                  altitudeAccuracy: 0,
-                  heading: 0,
-                  speed: 0,
-                },
-                timestamp: Date.now(),
-              });
-            }
+            setLocation({
+              coords: {
+                latitude: savedLoc.latitude,
+                longitude: savedLoc.longitude,
+                altitude: 0,
+                accuracy: 0,
+                altitudeAccuracy: 0,
+                heading: 0,
+                speed: 0,
+              },
+              timestamp: Date.now(),
+            });
+          } else {
+            // No location saved - show prompt after a short delay
+            console.log('⚠️ Truck has no location saved on server');
+            setHasServerLocation(false);
+            setTimeout(() => setShowLocationPrompt(true), 1500);
           }
           
           // If truck is already online, start tracking time
-          if (user.profile.truck.isOnline) {
+          if (truckData.isOnline) {
             onlineStartTime.current = Date.now();
             startOnlineTimer();
           }
@@ -254,6 +263,52 @@ const VendorScreen: React.FC = () => {
     transform: [{ scale: ringScale.value }],
     opacity: ringOpacity.value,
   }));
+
+  // Function to save current location to server
+  const saveCurrentLocation = async () => {
+    if (!truckId) {
+      Alert.alert('Error', 'Truck not found');
+      return;
+    }
+
+    try {
+      setShowLocationPrompt(false);
+      
+      // Get current location
+      let currentLocation = await Location.getCurrentPositionAsync({});
+      setLocation(currentLocation);
+      
+      // Reverse geocode for address
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: currentLocation.coords.latitude,
+        longitude: currentLocation.coords.longitude,
+      });
+      
+      let addrString = 'Location set';
+      if (reverseGeocode.length > 0) {
+        const addr = reverseGeocode[0];
+        addrString = `${addr.street || ''} ${addr.city || ''}, ${addr.region || ''}`.trim();
+        setAddress(addrString);
+      }
+
+      // Save to backend
+      await apiClient.put(`/api/trucks/${truckId}`, {
+        location: {
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          address: addrString,
+        },
+      });
+      
+      setHasServerLocation(true);
+      console.log('✅ Location saved to server');
+      Alert.alert('Success! 📍', 'Your truck location has been saved. Customers can now find you!');
+      
+    } catch (error) {
+      console.error('Error saving location:', error);
+      Alert.alert('Error', 'Failed to save location. Please try again.');
+    }
+  };
 
   const toggleSwitch = async () => {
     const newStatus = !isLive;
@@ -591,6 +646,46 @@ const VendorScreen: React.FC = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Location Setup Prompt Modal */}
+      <Modal
+        visible={showLocationPrompt}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            entering={FadeIn.duration(300)}
+            style={styles.locationPromptModal}
+          >
+            <View style={styles.locationIcon}>
+              <Icon name="location" size={40} color={theme.colors.primary.main} />
+            </View>
+            <Text style={styles.locationPromptTitle}>Set Your Location 📍</Text>
+            <Text style={styles.locationPromptText}>
+              Your truck location is not set yet. Customers won't be able to find you on the map until you set your location.
+            </Text>
+            <TouchableOpacity 
+              style={styles.locationPromptButton}
+              onPress={saveCurrentLocation}
+            >
+              <LinearGradient
+                colors={theme.gradients.primary}
+                style={styles.locationPromptGradient}
+              >
+                <Icon name="location" size={20} color={theme.colors.white} />
+                <Text style={styles.locationPromptButtonText}>Set My Location Now</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.locationPromptLater}
+              onPress={() => setShowLocationPrompt(false)}
+            >
+              <Text style={styles.locationPromptLaterText}>I'll do it later</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1010,6 +1105,72 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  // Location Prompt Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  locationPromptModal: {
+    backgroundColor: theme.colors.white,
+    borderRadius: theme.borderRadius['2xl'],
+    padding: theme.spacing.xl,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    ...theme.shadows.lg,
+  },
+  locationIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.primary.lighter,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  locationPromptTitle: {
+    fontSize: theme.typography.fontSizes.xl,
+    fontWeight: theme.typography.fontWeights.bold,
+    color: theme.colors.gray[900],
+    textAlign: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  locationPromptText: {
+    fontSize: theme.typography.fontSizes.base,
+    color: theme.colors.gray[600],
+    textAlign: 'center',
+    marginBottom: theme.spacing.xl,
+    lineHeight: 22,
+  },
+  locationPromptButton: {
+    width: '100%',
+    borderRadius: theme.borderRadius.xl,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.md,
+  },
+  locationPromptGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  locationPromptButtonText: {
+    fontSize: theme.typography.fontSizes.base,
+    fontWeight: theme.typography.fontWeights.bold,
+    color: theme.colors.white,
+  },
+  locationPromptLater: {
+    paddingVertical: theme.spacing.sm,
+  },
+  locationPromptLaterText: {
+    fontSize: theme.typography.fontSizes.sm,
+    color: theme.colors.gray[500],
   },
 });
 

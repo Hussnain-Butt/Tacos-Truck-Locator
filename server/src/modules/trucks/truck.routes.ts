@@ -95,26 +95,34 @@ router.get(
     });
 
     // Filter by distance (Haversine formula)
-    const nearbyTrucks = trucks.filter((truck) => {
-      if (!truck.location) return false;
-      
+    // Separate trucks with and without location
+    const trucksWithLocation = trucks.filter(truck => truck.location);
+    const trucksWithoutLocation = trucks.filter(truck => !truck.location);
+    
+    // Filter trucks with location by distance
+    const nearbyTrucks = trucksWithLocation.filter((truck) => {
       const distance = calculateDistance(
         lat, lng,
-        truck.location.latitude, truck.location.longitude
+        truck.location!.latitude, truck.location!.longitude
       );
-      
       return distance <= radiusKm;
     }).map((truck) => ({
       ...truck,
-      distance: truck.location 
-        ? calculateDistance(lat, lng, truck.location.latitude, truck.location.longitude)
-        : null,
+      distance: calculateDistance(lat, lng, truck.location!.latitude, truck.location!.longitude),
     }));
 
     // Sort by distance
     nearbyTrucks.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+    
+    // Also include trucks without location (at the end)
+    const allTrucks = [
+      ...nearbyTrucks,
+      ...trucksWithoutLocation.map(t => ({ ...t, distance: null }))
+    ];
 
-    res.json({ trucks: nearbyTrucks });
+    console.log(`📍 Nearby trucks query: ${trucks.length} total, ${nearbyTrucks.length} with location in radius, ${trucksWithoutLocation.length} without location`);
+
+    res.json({ trucks: allTrucks });
   })
 );
 
