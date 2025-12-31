@@ -78,17 +78,15 @@ router.get(
     const lng = parseFloat(longitude as string);
     const radiusKm = parseFloat(radius as string);
 
-    // Get all online trucks with locations
+    // Get all trucks with locations (including offline ones)
     const trucks = await prisma.truck.findMany({
-      where: { isOnline: true },
       include: {
         location: true,
         vendor: {
           select: { name: true, avatarUrl: true },
         },
         photos: {
-          where: { isPrimary: true },
-          take: 1,
+          orderBy: { isPrimary: 'desc' },
         },
         _count: {
           select: { reviews: true, menu: true },

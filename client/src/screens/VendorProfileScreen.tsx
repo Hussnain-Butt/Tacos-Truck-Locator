@@ -74,39 +74,30 @@ const VendorProfileScreen = () => {
         setVendorName(anyUser.profile.name);
         setPhone(anyUser.profile.phone || '');
         setAvatar(anyUser.profile.avatarUrl);
-        
-        // Check for truck in profile (backend returns it nested in vendor profile)
-        if (anyUser.profile.truck) {
-          setTruckId(anyUser.profile.truck.id);
-          setTruckName(anyUser.profile.truck.name);
-          setTruckDescription(anyUser.profile.truck.description || '');
-          setSpecialty(anyUser.profile.truck.specialty);
-          // Set truck photos
-          if (anyUser.profile.truck.photos) {
-            setTruckPhotos(anyUser.profile.truck.photos);
-          }
-        } else if (anyUser.vendor?.truck) {
-             // Fallback if structure is different
-             setTruckId(anyUser.vendor.truck.id);
-             setTruckName(anyUser.vendor.truck.name);
-             setTruckDescription(anyUser.vendor.truck.description || '');
-             setSpecialty(anyUser.vendor.truck.specialty);
-             if (anyUser.vendor.truck.photos) {
-               setTruckPhotos(anyUser.vendor.truck.photos);
-             }
+      }
+      
+      // Backend now returns truck at root level for vendors
+      if (anyUser?.truck) {
+        console.log('✅ Found truck at root level:', anyUser.truck.id);
+        setTruckId(anyUser.truck.id);
+        setTruckName(anyUser.truck.name);
+        setTruckDescription(anyUser.truck.description || '');
+        setSpecialty(anyUser.truck.specialty);
+        if (anyUser.truck.photos) {
+          setTruckPhotos(anyUser.truck.photos);
         }
-      } else if (anyUser?.role === 'VENDOR' && anyUser?.vendor) {
-         // Fallback for direct vendor access if profile isn't populated
-        setVendorName(anyUser.vendor.name);
-        setPhone(anyUser.vendor.phone || '');
-        setAvatar(anyUser.vendor.avatarUrl);
-        
-        if (anyUser.vendor.truck) {
-          setTruckId(anyUser.vendor.truck.id);
-          setTruckName(anyUser.vendor.truck.name);
-          setTruckDescription(anyUser.vendor.truck.description || '');
-          setSpecialty(anyUser.vendor.truck.specialty);
+      } else if (anyUser?.profile?.truck) {
+        // Fallback: Check nested in profile
+        console.log('✅ Found truck in profile:', anyUser.profile.truck.id);
+        setTruckId(anyUser.profile.truck.id);
+        setTruckName(anyUser.profile.truck.name);
+        setTruckDescription(anyUser.profile.truck.description || '');
+        setSpecialty(anyUser.profile.truck.specialty);
+        if (anyUser.profile.truck.photos) {
+          setTruckPhotos(anyUser.profile.truck.photos);
         }
+      } else {
+        console.log('⚠️ No truck found in response');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);

@@ -51,6 +51,13 @@ class ApiClient {
   }
 
   /**
+   * Get the base URL
+   */
+  getBaseUrl() {
+    return this.baseUrl;
+  }
+
+  /**
    * Set the auth token (call this after Clerk login)
    */
   setAuthToken(token: string | null) {

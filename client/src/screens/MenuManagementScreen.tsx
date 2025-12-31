@@ -75,14 +75,21 @@ const MenuManagementScreen: React.FC = () => {
       const userRes = await authService.getCurrentUser();
       const user = userRes.user as any;
       
-      if (user?.profile?.truck?.id) {
-        setTruckId(user.profile.truck.id);
+      // Backend now returns truck at root level for vendors
+      const truckData = user?.truck || user?.profile?.truck;
+      
+      if (truckData?.id) {
+        console.log('✅ Menu: Found truck:', truckData.id);
+        setTruckId(truckData.id);
         
         // Fetch menu items
-        const menuRes = await apiClient.get<{ menu: MenuItem[] }>(`/api/trucks/${user.profile.truck.id}/menu`);
+        const menuRes = await apiClient.get<{ menu: MenuItem[] }>(`/api/trucks/${truckData.id}/menu`);
         if (menuRes.data?.menu) {
           setMenuItems(menuRes.data.menu);
         }
+      } else {
+        console.log('⚠️ Menu: No truck found');
+        Alert.alert('Error', 'No truck found. Please set up your truck first.');
       }
     } catch (error) {
       console.error('Error loading menu:', error);
@@ -559,7 +566,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.white,
     borderTopLeftRadius: theme.borderRadius['2xl'],
     borderTopRightRadius: theme.borderRadius['2xl'],
-    maxHeight: '85%',
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -644,6 +651,7 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     padding: theme.spacing.lg,
+    paddingBottom: 80,
     borderTopWidth: 1,
     borderTopColor: theme.colors.gray[200],
   },
