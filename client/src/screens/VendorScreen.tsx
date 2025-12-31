@@ -32,6 +32,7 @@ import { apiClient } from '../services/api';
 import { socketService } from '../services/socketService';
 import { authService } from '../services/authService';
 import { useAuth } from '@clerk/clerk-expo';
+import { useAuthContext } from '../context/AuthContext';
 
 type VendorScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Vendor'>;
 
@@ -40,12 +41,39 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const VendorScreen: React.FC = () => {
   const navigation = useNavigation<VendorScreenNavigationProp>();
   const { getToken } = useAuth();
+  const { signOut } = useAuthContext();
   const [isLive, setIsLive] = useState<boolean>(false);
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [address, setAddress] = useState<string>('Fetching address...');
   const [truckId, setTruckId] = useState<string | null>(null);
   const [truckName, setTruckName] = useState<string>('My Taco Truck');
+
+  // Logout handler
+  const handleLogout = async () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            // Go offline if live
+            if (truckId && isLive) {
+              socketService.goOffline(truckId);
+            }
+            await signOut();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'VendorLogin' }],
+            });
+          },
+        },
+      ]
+    );
+  };
 
   // Performance Stats
   const [hoursOnline, setHoursOnline] = useState<number>(0);
@@ -324,12 +352,20 @@ const VendorScreen: React.FC = () => {
             <Text style={styles.greeting}>Welcome back,</Text>
             <Text style={styles.headerTitle}>Truck Dashboard</Text>
           </View>
-          <IconButton
-            name="settings"
-            size={24}
-            color="rgba(255,255,255,0.8)"
-            onPress={() => navigation.navigate('VendorProfile')}
-          />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <IconButton
+              name="settings"
+              size={24}
+              color="rgba(255,255,255,0.8)"
+              onPress={() => navigation.navigate('VendorProfile')}
+            />
+            <IconButton
+              name="logout"
+              size={24}
+              color="rgba(255,255,255,0.8)"
+              onPress={handleLogout}
+            />
+          </View>
         </Animated.View>
 
         {/* Premium Status Card */}

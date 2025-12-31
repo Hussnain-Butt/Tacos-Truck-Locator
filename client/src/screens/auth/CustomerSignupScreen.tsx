@@ -1,9 +1,9 @@
 /**
- * Modern Signup Screen
- * Premium registration UI with animated inputs and progress steps
+ * Customer Signup Screen
+ * Clean signup UI for customer users
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,35 +24,24 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
-import { theme } from '../theme/theme';
-import { Button } from '../components/Button';
-import { Icon } from '../components/Icons';
-import { useSignUp, useOAuth, useAuth, useUser } from '@clerk/clerk-expo';
+import type { RootStackParamList } from '../../../App';
+import { theme } from '../../theme/theme';
+import { Button } from '../../components/Button';
+import { Icon } from '../../components/Icons';
+import { useSignUp, useOAuth, useAuth } from '@clerk/clerk-expo';
+import { useAuthContext } from '../../context/AuthContext';
 import * as WebBrowser from 'expo-web-browser';
-import { authService } from '../services/authService';
 
-// Complete OAuth session
 WebBrowser.maybeCompleteAuthSession();
 
-type SignupScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Signup'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-interface SignupScreenProps {
-  route?: {
-    params?: {
-      userType?: 'customer' | 'vendor';
-    };
-  };
-}
-
-const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
-  const navigation = useNavigation<SignupScreenNavigationProp>();
-  const userType = route?.params?.userType || 'customer';
-  
+const CustomerSignupScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { isSignedIn, signOut, getToken } = useAuth();
-  const { user } = useUser();
+  const { getToken } = useAuth();
+  const { syncUser } = useAuthContext();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -71,34 +60,9 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
-  
-  // Flag to track if we just signed up (to prevent auto-redirect interference)
-  const justSignedUp = useRef(false);
-  // Track if component was mounted with user already signed in
-  const wasSignedInOnMount = useRef(isSignedIn);
-
-  // If already signed in ON MOUNT (not from this signup flow), redirect to dashboard
-  // This prevents race condition with signup navigation
-  useEffect(() => {
-    // Only auto-redirect if user was already signed in when they arrived at this screen
-    // AND we haven't just completed signup in this flow
-    if (wasSignedInOnMount.current && isSignedIn && !justSignedUp.current && !pendingVerification) {
-      if (userType === 'vendor') {
-        navigation.reset({ index: 0, routes: [{ name: 'Vendor' }] });
-      } else {
-        navigation.reset({ index: 0, routes: [{ name: 'Customer' }] });
-      }
-    }
-  }, [isSignedIn, userType, navigation, pendingVerification]);
 
   const handleSignup = async () => {
     if (!isLoaded) return;
-    
-    // Check if already signed in
-    if (isSignedIn) {
-      Alert.alert('Already Signed In', 'Please sign out first to create a new account.');
-      return;
-    }
     
     Keyboard.dismiss();
     
@@ -142,40 +106,16 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         
-        // Get auth token and set it for API calls
-        const token = await getToken();
-        if (token) {
-          authService.setToken(token);
-        }
-        
-        console.log(`📝 Syncing user with role: ${userType === 'vendor' ? 'VENDOR' : 'CUSTOMER'}`);
-        
-        // Sync with backend to set correct role
-        const syncResult = await authService.syncUser({
-          clerkId: result.createdUserId || '',
-          email,
-          name,
-          role: userType === 'vendor' ? 'VENDOR' : 'CUSTOMER',
-        });
-        
+        // Sync with backend as CUSTOMER
+        console.log('📝 Syncing user as CUSTOMER...');
+        const syncResult = await syncUser('CUSTOMER');
         console.log('✅ Sync result:', syncResult);
         
-        // Mark as just signed up to prevent auto-redirect interference
-        justSignedUp.current = true;
-        
-        // Navigate based on user type
-        if (userType === 'vendor') {
-          // Vendor goes to truck setup first
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'TruckSetup' }],
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Customer' }],
-          });
-        }
+        // Navigate to customer dashboard
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Customer' }],
+        });
       }
     } catch (error: any) {
       console.error('Verification error:', error);
@@ -186,38 +126,6 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
   };
 
   const handleGoogleSignup = async () => {
-    // Check if already signed in
-    if (isSignedIn) {
-      Alert.alert(
-        'Already Signed In',
-        'You are already signed in. Go to dashboard or sign out first.',
-        [
-          {
-            text: 'Go to Dashboard',
-            onPress: () => {
-              if (userType === 'vendor') {
-                navigation.reset({ index: 0, routes: [{ name: 'Vendor' }] });
-              } else {
-                navigation.reset({ index: 0, routes: [{ name: 'Customer' }] });
-              }
-            },
-          },
-          {
-            text: 'Sign Out',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await signOut();
-              } catch (e) {
-                console.log('Sign out error:', e);
-              }
-            },
-          },
-        ]
-      );
-      return;
-    }
-    
     try {
       setLoading(true);
       const { createdSessionId, setActive: setActiveSession } = await startOAuthFlow();
@@ -225,66 +133,16 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
       if (createdSessionId && setActiveSession) {
         await setActiveSession({ session: createdSessionId });
         
-        // Wait a moment for Clerk to update user object
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Sync as CUSTOMER
+        console.log('📝 Google Signup: Syncing as CUSTOMER...');
+        const syncResult = await syncUser('CUSTOMER');
+        console.log('✅ Google Sync result:', syncResult);
         
-        // Get auth token and set it
-        const token = await getToken();
-        if (token) {
-          authService.setToken(token);
-        }
-        
-        // Get clerkId from token (this is always available)
-        const tokenParts = token?.split('.') || [];
-        let clerkId = '';
-        if (tokenParts.length === 3) {
-          try {
-            const base64Payload = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-            const decoded = decodeURIComponent(escape(atob(base64Payload)));
-            const payload = JSON.parse(decoded);
-            clerkId = payload.sub || '';
-          } catch (e) {
-            console.error('Token decode error:', e);
-          }
-        }
-        
-        // Get email from Clerk user object (updated after OAuth)
-        const clerkUser = user;
-        const email = clerkUser?.primaryEmailAddress?.emailAddress || 
-                      clerkUser?.emailAddresses?.[0]?.emailAddress || '';
-        const userName = clerkUser?.fullName || clerkUser?.firstName || 'User';
-        
-        console.log(`📝 Google Signup: clerkId=${clerkId}, email=${email}, name=${userName}`);
-        
-        if (clerkId && email) {
-          // Sync with backend to set correct role
-          const syncResult = await authService.syncUser({
-            clerkId,
-            email,
-            name: userName,
-            role: userType === 'vendor' ? 'VENDOR' : 'CUSTOMER',
-          });
-          console.log('✅ Google Sync result:', syncResult);
-        } else {
-          console.warn('⚠️ Could not get user data, skipping sync. Will sync on next request.');
-        }
-        
-        // Mark as just signed up to prevent auto-redirect interference
-        justSignedUp.current = true;
-        
-        // Navigate based on user type
-        if (userType === 'vendor') {
-          // Vendor goes to truck setup first
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'TruckSetup' }],
-          });
-        } else {
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'Customer' }],
-          });
-        }
+        // Navigate to customer dashboard
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Customer' }],
+        });
       }
     } catch (error: any) {
       console.error('Google signup error:', error);
@@ -304,9 +162,58 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
 
   const passwordStrength = getPasswordStrength();
 
+  // Verification Screen
+  if (pendingVerification) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#FFF7ED', '#FFEDD5', theme.colors.background]}
+          style={styles.backgroundGradient}
+        />
+        <View style={styles.verificationContainer}>
+          <Animated.View entering={FadeInDown.springify()} style={styles.header}>
+            <LinearGradient
+              colors={theme.gradients.primary}
+              style={styles.iconContainer}
+            >
+              <Icon name="email" size={40} color={theme.colors.white} />
+            </LinearGradient>
+            <Text style={styles.title}>Verify Your Email</Text>
+            <Text style={styles.subtitle}>
+              Enter the 6-digit code we sent to {email}
+            </Text>
+          </Animated.View>
+          
+          <Animated.View entering={FadeInUp.delay(200).springify()} style={styles.codeContainer}>
+            <TextInput
+              style={styles.codeInput}
+              placeholder="000000"
+              placeholderTextColor={theme.colors.gray[400]}
+              value={code}
+              onChangeText={setCode}
+              keyboardType="number-pad"
+              maxLength={6}
+              textAlign="center"
+            />
+          </Animated.View>
+          
+          <Animated.View entering={FadeInUp.delay(300).springify()}>
+            <Button
+              title="Verify Email"
+              onPress={handleVerify}
+              variant="primary"
+              size="large"
+              fullWidth
+              loading={loading}
+            />
+          </Animated.View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Background */}
       <LinearGradient
         colors={['#FFF7ED', '#FFEDD5', theme.colors.background]}
         style={styles.backgroundGradient}
@@ -326,24 +233,15 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
             entering={FadeInDown.delay(100).springify()}
             style={styles.header}
           >
-            {/* Icon */}
             <LinearGradient
-              colors={userType === 'vendor' ? theme.gradients.ocean : theme.gradients.primary}
+              colors={theme.gradients.primary}
               style={styles.iconContainer}
             >
-              <Icon 
-                name={userType === 'vendor' ? 'truck' : 'taco'} 
-                size={40} 
-                color={theme.colors.white} 
-              />
+              <Icon name="taco" size={40} color={theme.colors.white} />
             </LinearGradient>
 
             <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>
-              {userType === 'vendor'
-                ? 'Start sharing your delicious food'
-                : 'Join the taco community'}
-            </Text>
+            <Text style={styles.subtitle}>Join the taco community</Text>
           </Animated.View>
 
           {/* Form */}
@@ -537,7 +435,7 @@ const SignupScreen: React.FC<SignupScreenProps> = ({ route }) => {
             style={styles.loginContainer}
           >
             <Text style={styles.loginText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login', { userType })}>
+            <TouchableOpacity onPress={() => navigation.navigate('CustomerLogin')}>
               <Text style={styles.loginLink}>Sign In</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -598,6 +496,11 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: theme.spacing['2xl'],
   },
+  verificationContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xl,
+  },
   header: {
     alignItems: 'center',
     marginBottom: theme.spacing.xl,
@@ -621,6 +524,20 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSizes.base,
     color: theme.colors.gray[600],
     textAlign: 'center',
+  },
+  codeContainer: {
+    marginBottom: theme.spacing.xl,
+  },
+  codeInput: {
+    backgroundColor: theme.colors.white,
+    borderWidth: 2,
+    borderColor: theme.colors.gray[200],
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.spacing.lg,
+    fontSize: 32,
+    letterSpacing: 12,
+    fontWeight: 'bold',
+    color: theme.colors.gray[900],
   },
   form: {
     marginBottom: theme.spacing.base,
@@ -751,4 +668,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignupScreen;
+export default CustomerSignupScreen;

@@ -379,7 +379,7 @@ const HomeScreen: React.FC = () => {
           <Animated.View entering={FadeInUp.delay(800).springify()}>
             <Button
               title="Find Tacos Near Me"
-              onPress={() => navigation.navigate('Signup' as any, { userType: 'customer' })}
+              onPress={() => navigation.navigate('CustomerSignup')}
               variant="primary"
               size="large"
               fullWidth
@@ -387,7 +387,7 @@ const HomeScreen: React.FC = () => {
             />
             <Text 
               style={styles.loginLink}
-              onPress={() => navigation.navigate('Login' as any, { userType: 'customer' })}
+              onPress={() => navigation.navigate('CustomerLogin')}
             >
               Already a member? <Text style={styles.loginLinkBold}>Sign In</Text>
             </Text>
@@ -400,7 +400,7 @@ const HomeScreen: React.FC = () => {
           >
             <Button
               title="I'm a Food Truck Owner"
-              onPress={() => navigation.navigate('Signup' as any, { userType: 'vendor' })}
+              onPress={() => navigation.navigate('VendorSignup')}
               variant="outline"
               size="large"
               fullWidth
@@ -408,7 +408,7 @@ const HomeScreen: React.FC = () => {
             />
             <Text 
               style={styles.loginLink}
-              onPress={() => navigation.navigate('Login' as any, { userType: 'vendor' })}
+              onPress={() => navigation.navigate('VendorLogin')}
             >
               Vendor login? <Text style={styles.loginLinkBold}>Sign In</Text>
             </Text>

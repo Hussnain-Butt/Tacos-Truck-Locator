@@ -121,6 +121,10 @@ const ProfileScreen: React.FC = () => {
           text: 'Logout', 
           onPress: async () => {
             await signOut();
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'CustomerLogin' as any }],
+            });
           }, 
           style: 'destructive' 
         },

@@ -113,6 +113,8 @@ async function processWebhookEvent(evt: ClerkUserWebhookEvent) {
 
 /**
  * Handle user.created event
+ * NOTE: Frontend sync (/api/auth/sync) takes priority for role setting.
+ * If user already exists (synced by frontend), we preserve their role.
  */
 async function handleUserCreated(
   clerkId: string,
@@ -121,31 +123,37 @@ async function handleUserCreated(
   role: 'CUSTOMER' | 'VENDOR',
   avatarUrl: string | null
 ) {
-  console.log(`👤 Creating user: ${email} (${role})`);
+  console.log(`👤 Webhook: Creating user: ${email} (webhook role: ${role})`);
 
-  // Check if user already exists with this email (different clerkId)
+  // Check if user already exists with this email (frontend may have synced first)
   const existingUser = await prisma.user.findUnique({
     where: { email },
+    include: { customer: true, vendor: true },
   });
 
   if (existingUser) {
-    // Update existing user with new clerkId
-    console.log(`🔄 User exists, updating clerkId for: ${email}`);
-    await prisma.user.update({
-      where: { email },
-      data: { clerkId, role },
-    });
-    console.log(`✅ User updated with new clerkId: ${existingUser.id}`);
+    // User exists - frontend sync happened first, preserve their role!
+    console.log(`🔄 User exists with role ${existingUser.role}, preserving role (frontend sync priority)`);
+    
+    // Only update clerkId if different (shouldn't happen, but safety check)
+    if (existingUser.clerkId !== clerkId) {
+      await prisma.user.update({
+        where: { email },
+        data: { clerkId }, // Only update clerkId, NOT role
+      });
+      console.log(`✅ Updated clerkId for existing user: ${existingUser.id}`);
+    }
     return;
   }
 
-  // Check if user exists with this clerkId
+  // Check if user exists with this clerkId (synced by frontend before webhook)
   const existingByClerkId = await prisma.user.findUnique({
     where: { clerkId },
+    include: { customer: true, vendor: true },
   });
 
   if (existingByClerkId) {
-    console.log(`⚠️ User already exists with clerkId: ${clerkId}`);
+    console.log(`⚠️ User already synced with clerkId: ${clerkId}, role: ${existingByClerkId.role}`);
     return;
   }
 
