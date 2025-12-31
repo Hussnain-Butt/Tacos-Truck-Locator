@@ -64,7 +64,7 @@ export const TruckCard: React.FC<TruckCardProps> = ({
     scale.value = withSpring(1, theme.animation.spring.bouncy);
   };
 
-  const distance = userLocation
+  const distance = userLocation && truck.location
     ? calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
@@ -211,7 +211,7 @@ export const TruckCardCompact: React.FC<TruckCardProps> = ({
     scale.value = withSpring(1, theme.animation.spring.bouncy);
   };
 
-  const distance = userLocation
+  const distance = userLocation && truck.location
     ? calculateDistance(
         userLocation.latitude,
         userLocation.longitude,
@@ -271,7 +271,7 @@ export const TruckCardCompact: React.FC<TruckCardProps> = ({
           >
             <LinearGradient
               colors={['#10B981', '#059669']}
-              style={styles.navigateGradient}
+              style={styles.compactNavigateGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  navigateGradient: {
+  compactNavigateGradient: {
     width: 40,
     height: 40,
     borderRadius: 12,

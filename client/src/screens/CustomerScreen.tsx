@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   TextInput,
   Dimensions,
+  Alert,
 } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -194,6 +195,11 @@ const CustomerScreen: React.FC = () => {
   }, []);
 
   const handleNavigate = (truck: TruckData) => {
+    if (!truck.location) {
+      Alert.alert('Location Unavailable', 'This truck has not set their location yet.');
+      return;
+    }
+    
     // Record navigation for analytics
     truckService.recordNavigation(truck.id);
     
@@ -244,7 +250,12 @@ const CustomerScreen: React.FC = () => {
       } else if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       } else {
+        // Sort by distance - trucks without location go to the end
         if (!location) return 0;
+        if (!a.location && !b.location) return 0;
+        if (!a.location) return 1; // a goes to end
+        if (!b.location) return -1; // b goes to end
+        
         const distA = calculateDistance(
           location.coords.latitude,
           location.coords.longitude,

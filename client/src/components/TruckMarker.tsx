@@ -26,6 +26,9 @@ interface TruckMarkerProps {
 }
 
 export const TruckMarker: React.FC<TruckMarkerProps> = ({ truck, onPress }) => {
+  // Don't render marker if truck has no location
+  if (!truck.location) return null;
+  
   return (
     <Marker
       coordinate={{
@@ -60,6 +63,9 @@ export const TruckMarker: React.FC<TruckMarkerProps> = ({ truck, onPress }) => {
 
 // Simple marker for better performance with many markers
 export const TruckMarkerSimple: React.FC<TruckMarkerProps> = ({ truck, onPress }) => {
+  // Don't render marker if truck has no location
+  if (!truck.location) return null;
+  
   return (
     <Marker
       coordinate={{

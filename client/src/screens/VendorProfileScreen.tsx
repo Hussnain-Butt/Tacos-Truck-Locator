@@ -28,8 +28,13 @@ import { Icon } from '../components/Icons';
 import { authService } from '../services/authService';
 import { truckService } from '../services/truckService';
 
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../App';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'VendorProfile'>;
+
 const VendorProfileScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProp>();
   const { getToken, signOut } = useAuth();
   
   const [loading, setLoading] = useState(false);
