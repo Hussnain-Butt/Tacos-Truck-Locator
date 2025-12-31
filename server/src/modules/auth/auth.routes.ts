@@ -386,13 +386,28 @@ router.get(
         return res.status(404).json({ error: 'User not found. Please complete signup.' });
       }
 
-      res.json({
+      // Build response based on role
+      const response: any = {
         id: user.id,
         clerkId: user.clerkId,
         email: user.email,
         role: user.role,
         profile: user.customer || user.vendor,
+      };
+
+      // For vendors, include truck data
+      if (user.role === 'VENDOR' && user.vendor) {
+        response.hasTruck = !!user.vendor.truck;
+        response.truck = user.vendor.truck || null;
+      }
+
+      console.log(`📝 /api/auth/me response for ${user.email}:`, {
+        role: user.role,
+        hasTruck: response.hasTruck,
+        truckId: response.truck?.id,
       });
+
+      res.json(response);
     } catch (error) {
       res.status(401).json({ error: 'Invalid token' });
     }

@@ -41,7 +41,7 @@ const CustomerLoginScreen: React.FC = () => {
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const { isSignedIn } = useAuth();
-  const { syncUser, refreshUser } = useAuthContext();
+  const { syncUser, refreshUser, user, isLoading } = useAuthContext();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,6 +51,17 @@ const CustomerLoginScreen: React.FC = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const passwordRef = useRef<TextInput>(null);
+
+  // If already signed in, redirect to dashboard
+  useEffect(() => {
+    if (isSignedIn && !isLoading) {
+      console.log('👤 Already signed in, redirecting to Customer dashboard');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Customer' }],
+      });
+    }
+  }, [isSignedIn, isLoading, navigation]);
 
   const handleLogin = async () => {
     if (!isLoaded) return;

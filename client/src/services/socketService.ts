@@ -5,14 +5,19 @@
 
 import { io, Socket } from 'socket.io-client';
 
-// Socket.IO server URL - use your machine's IP for physical devices
-const DEV_MACHINE_IP = '192.168.1.10';
-const SOCKET_URL = __DEV__
-  ? `http://${DEV_MACHINE_IP}:3000` // Physical device / Android emulator
-  : 'https://tacos-truck-locator-production.up.railway.app';
+// Railway Production URL - Backend is hosted on Railway
+const RAILWAY_URL = 'https://tacos-truck-locator-production.up.railway.app';
 
-// For iOS simulator, use: http://localhost:3000
-// For physical device, use your computer's IP: http://192.168.x.x:3000
+// Set to true to force use of Railway (when backend is not running locally)
+const USE_RAILWAY = true;
+
+// For local development
+const DEV_MACHINE_IP = '192.168.1.10';
+const SOCKET_URL = USE_RAILWAY
+  ? RAILWAY_URL
+  : __DEV__
+    ? `http://${DEV_MACHINE_IP}:3000`
+    : RAILWAY_URL;
 
 interface LocationData {
   truckId: string;

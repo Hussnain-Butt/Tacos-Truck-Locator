@@ -5,18 +5,27 @@
 
 import { Platform } from 'react-native';
 
-// API Base URL - Auto-detect based on platform
-// For real Android devices, use your computer's IP address
-const DEV_MACHINE_IP = '192.168.1.10'; // Your computer's IP
+// Railway Production URL - Backend is hosted on Railway
+const RAILWAY_URL = 'https://tacos-truck-locator-production.up.railway.app';
+
+// Set to true to force use of Railway (when backend is not running locally)
+const USE_RAILWAY = true;
+
+// For local development, use your computer's IP
+const DEV_MACHINE_IP = '192.168.1.10';
 
 const getBaseUrl = () => {
+  // Always use Railway if flag is set
+  if (USE_RAILWAY) {
+    return RAILWAY_URL;
+  }
+  
   if (!__DEV__) {
-    return 'https://tacos-truck-locator-production.up.railway.app';
+    return RAILWAY_URL;
   }
   
   // For Android (both emulator and real device)
   if (Platform.OS === 'android') {
-    // Use actual IP for real devices (works for emulator too)
     return `http://${DEV_MACHINE_IP}:3000`;
   }
   

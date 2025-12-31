@@ -3,7 +3,7 @@
  * Premium signup UI for food truck vendors
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import type { RootStackParamList } from '../../../App';
 import { theme } from '../../theme/theme';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icons';
-import { useSignUp, useOAuth } from '@clerk/clerk-expo';
+import { useSignUp, useOAuth, useAuth } from '@clerk/clerk-expo';
 import { useAuthContext } from '../../context/AuthContext';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -40,7 +40,8 @@ const VendorSignupScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { syncUser } = useAuthContext();
+  const { isSignedIn } = useAuth();
+  const { syncUser, isLoading } = useAuthContext();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -59,6 +60,17 @@ const VendorSignupScreen: React.FC = () => {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+
+  // If already signed in, redirect to dashboard
+  useEffect(() => {
+    if (isSignedIn && !isLoading && !pendingVerification) {
+      console.log('👤 Already signed in, redirecting to Vendor dashboard');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Vendor' }],
+      });
+    }
+  }, [isSignedIn, isLoading, pendingVerification, navigation]);
 
   const handleSignup = async () => {
     if (!isLoaded) return;

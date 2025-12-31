@@ -3,7 +3,7 @@
  * Clean signup UI for customer users
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -40,8 +40,8 @@ const CustomerSignupScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { getToken } = useAuth();
-  const { syncUser } = useAuthContext();
+  const { isSignedIn, getToken } = useAuth();
+  const { syncUser, isLoading } = useAuthContext();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -60,6 +60,17 @@ const CustomerSignupScreen: React.FC = () => {
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
   const confirmPasswordRef = useRef<TextInput>(null);
+
+  // If already signed in, redirect to dashboard
+  useEffect(() => {
+    if (isSignedIn && !isLoading && !pendingVerification) {
+      console.log('👤 Already signed in, redirecting to Customer dashboard');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Customer' }],
+      });
+    }
+  }, [isSignedIn, isLoading, pendingVerification, navigation]);
 
   const handleSignup = async () => {
     if (!isLoaded) return;
